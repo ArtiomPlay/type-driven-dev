@@ -1,4 +1,5 @@
 # Idris 2
+/build
 *.ttc
 *.ttm
 
