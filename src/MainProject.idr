@@ -32,6 +32,14 @@ run _ (Done final) = final
 respondTo : String -> String
 respondTo cmd = case toLower cmd of
                      "help" => "Help"
+                     "ghosts" => "ghosts"
+                     "ghosts all" => "ghosts all"
+                     "check [evidence]" => "check [evidence]"
+                     "uncheck [evidence]" => "uncheck [evidence]"
+                     "add ghost" => "add ghost"
+                     "add evidence" => "add evidence"
+                     "remove ghost" => "remove ghost"
+                     "remove evidence" => "remove evidence"
                      _ => "Unknown command"
 
 loop : InfIO
