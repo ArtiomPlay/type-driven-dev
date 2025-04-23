@@ -1,6 +1,7 @@
 module MainProject
 
 import Data.String
+import Data.List
 import System
 
 %default total
@@ -10,6 +11,57 @@ data InfIO : Type where
     Done : IO() -> InfIO
 
 data Fuel' = Dry | More (Lazy Fuel')
+
+data Evidence = EMP | Orbs | Box | Freezing | Ultraviolet | Writting | DOTS
+
+Eq Evidence where
+    (==) EMP EMP = True
+    (==) Orbs Orbs = True
+    (==) Box Box = True
+    (==) Freezing Freezing = True
+    (==) Ultraviolet Ultraviolet = True
+    (==) Writting Writting = True
+    (==) DOTS DOTS = True
+    (==) _ _ = False
+
+allEvidences : List Evidence
+allEvidences = [EMP, Orbs, Box, Freezing, Ultraviolet, Writting, DOTS]
+
+record Ghost where
+    constructor MkGhost
+    name : String
+    evidences : List Evidence
+
+allGhosts : List Ghost
+allGhosts = [
+    MkGhost "Banshee" [Orbs,Ultraviolet,DOTS],
+    MkGhost "Demon" [Freezing,Ultraviolet,Writting],
+    MkGhost "Deogen" [Box,Writting,DOTS],
+    MkGhost "Goryo" [EMP,Ultraviolet,DOTS],
+    MkGhost "Hantu" [Orbs,Freezing,Ultraviolet],
+    MkGhost "Jinn" [EMP,Freezing,Ultraviolet],
+    MkGhost "Mare" [Orbs,Box,Writting],
+    MkGhost "Moroi" [Box,Freezing,Writting],
+    MkGhost "Myling" [EMP,Ultraviolet,Writting],
+    MkGhost "Obake" [EMP,Orbs,Ultraviolet],
+    MkGhost "Oni" [EMP,Freezing,DOTS],
+    MkGhost "Onryo" [Orbs,Box,Freezing],
+    MkGhost "Phantom" [Box,Ultraviolet,DOTS],
+    MkGhost "Poltergeist" [Box,Ultraviolet,Writting],
+    MkGhost "Raiju" [EMP,Orbs,DOTS],
+    MkGhost "Revenant" [Orbs,Freezing,Writting],
+    MkGhost "Shade" [EMP,Freezing,Writting],
+    MkGhost "Spirit" [EMP,Box,Writting],
+    MkGhost "Thaye" [Orbs,Writting,DOTS],
+    MkGhost "The Mimic" [Box,Freezing,Ultraviolet],
+    MkGhost "The Twins" [EMP,Box,Freezing],
+    MkGhost "Wraith" [EMP,Box,DOTS],
+    MkGhost "Yokai" [Orbs,Box,DOTS],
+    MkGhost "Yurei" [Orbs,Freezing,DOTS]
+]
+
+currentGhosts : List Ghost
+currentGhosts = allGhosts
 
 covering
 forever : Fuel'
@@ -29,28 +81,78 @@ run _ (Done final) = final
 (>>) : IO a -> Inf InfIO -> Inf InfIO
 (>>) act next = Do act (\_ => next)
 
-respondTo : String -> String
-respondTo cmd = case toLower cmd of
-                     "help" => "Help"
-                     "ghosts" => "ghosts"
-                     "ghosts all" => "ghosts all"
-                     "check [evidence]" => "check [evidence]"
-                     "uncheck [evidence]" => "uncheck [evidence]"
-                     "add ghost" => "add ghost"
-                     "add evidence" => "add evidence"
-                     "remove ghost" => "remove ghost"
-                     "remove evidence" => "remove evidence"
-                     _ => "Unknown command"
+showEvidence : Evidence -> String
+showEvidence e = case e of
+                      EMP => "EMP 5 (EMP)"
+                      Orbs => "Ghost Orbs (Orbs)"
+                      Box => "Spirit Box (Box)"
+                      Freezing => "Freezing Temperature (Freezing)"
+                      Ultraviolet => "Ultraviolet (Ultraviolet)"
+                      Writting => "Ghost Writting (Writting)"
+                      DOTS => "D.O.T.S Projector (DOTS)"
 
-loop : InfIO
-loop =
+showEvidenceList : List Evidence -> String
+showEvidenceList evidences = case evidences of
+                                  [] => "No evidences"
+                                  _ => joinBy "\n" (map showEvidence evidences)
+
+showGhost : Ghost -> String
+showGhost (MkGhost name evidences) =
+    name ++ " (" ++ joinBy ", " (map showEvidence evidences) ++ ")"
+
+showGhostList : List Ghost -> String
+showGhostList ghosts = case ghosts of
+                            [] => "No ghosts"
+                            _ => joinBy "\n" (map showGhost ghosts)
+
+filterGhosts : List Evidence -> List Ghost
+filterGhosts selected =
+    filter (\(MkGhost _ evs) => all (`elem` evs) selected) allGhosts
+
+parseEvidence : String -> Maybe Evidence
+parseEvidence str = case toLower str of
+                         "emp" => Just EMP
+                         "orbs" => Just Orbs
+                         "box" => Just Box
+                         "freezing" => Just Freezing
+                         "ultraviolet" => Just Ultraviolet
+                         "writting" => Just Writting
+                         "dots" => Just DOTS
+                         _ => Nothing
+
+handleInput : String -> List Evidence -> (String, List Evidence)
+handleInput input checked =
+    let parts = words input in
+    case parts of
+        ["ghosts"] => (showGhostList (filterGhosts checked), checked)
+        ["ghosts", "all"] => (showGhostList allGhosts, checked)
+        ["evidences"] => (showEvidenceList checked, checked)
+        ["evidences", "all"] => (showEvidenceList allEvidences, checked)
+        ["check", evStr] =>
+            case parseEvidence evStr of
+                Just ev =>
+                    if elem ev checked then ("Already checked", checked)
+                    else ("Checked " ++ showEvidence ev, ev :: checked)
+                Nothing => ("Unknown evidence: " ++ evStr, checked)
+        ["uncheck", evStr] =>
+            case parseEvidence evStr of
+                Just ev =>
+                    if elem ev checked then ("Unchecked " ++ showEvidence ev, delete ev checked)
+                    else ("Evidence not checked", checked)
+                Nothing => ("Unknown evidence: " ++ evStr, checked)
+        ["help"] => ("Available commands:\ncheck [evidence]\nuncheck [evidence]\nghosts\nghosts all\nevidences\nevidences all\nexit", checked)
+        _ => ("Unknown command", checked)
+
+loop : List Evidence -> InfIO
+loop checked =
     Do (putStr "\n>>>") $ \_ =>
     Do getLine $ \input =>
         if toLower input == "exit" then
             Done (putStrLn "Exiting. Goodbye!")
             else
-                Do (putStrLn (respondTo input)) (\_ => loop)
+                case handleInput input checked of
+                    (output, newChecked) => Do (putStrLn output) (\_ => loop newChecked)
 
 covering
 main : IO()
-main = run forever loop
+main = run forever (loop [])
