@@ -156,3 +156,21 @@ loop checked =
 covering
 main : IO()
 main = run forever (loop [])
+
+testParseEvidence : parseEvidence "emp" = Just EMP
+testParseEvidence = Refl
+
+testParseEvidence' : parseEvidence "something" = Nothing
+testParseEvidence' = Refl
+
+testFilterGhosts : filterGhosts [Freezing, Ultraviolet, Writting] = [MkGhost "Demon" [Freezing, Ultraviolet, Writting]]
+testFilterGhosts = Refl
+
+testShowEvidenceList : showEvidenceList [EMP] = "EMP 5 (EMP)"
+testShowEvidenceList = Refl
+
+testShowEvidenceList' : showEvidenceList [EMP,Box] = "EMP 5 (EMP)\nSpirit Box (Box)"
+testShowEvidenceList' = Refl
+
+testShowGhost : showGhost (MkGhost "Spirit" [EMP, Box, Writting]) = "Spirit (EMP 5 (EMP), Spirit Box (Box), Ghost Writting (Writting))"
+testShowGhost = Refl
