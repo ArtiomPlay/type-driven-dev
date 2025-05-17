@@ -2,7 +2,6 @@ module MainProject
 
 import Data.String
 import Data.List
-import System
 
 %default total
 
@@ -53,7 +52,7 @@ allGhosts = [
     MkGhost "Shade" [EMP,Freezing,Writting],
     MkGhost "Spirit" [EMP,Box,Writting],
     MkGhost "Thaye" [Orbs,Writting,DOTS],
-    MkGhost "The Mimic" [Box,Freezing,Ultraviolet],
+    MkGhost "The Mimic" [Orbs,Box,Freezing,Ultraviolet],
     MkGhost "The Twins" [EMP,Box,Freezing],
     MkGhost "Wraith" [EMP,Box,DOTS],
     MkGhost "Yokai" [Orbs,Box,DOTS],
