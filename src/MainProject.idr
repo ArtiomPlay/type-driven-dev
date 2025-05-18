@@ -2,6 +2,7 @@ module MainProject
 
 import Data.String
 import Data.List
+import Data.Vect
 
 %default total
 
@@ -23,13 +24,11 @@ Eq Evidence where
     (==) DOTS DOTS = True
     (==) _ _ = False
 
+data Ghost : Type where
+    MkGhost : (name : String) -> {n : Nat} -> (evidences : Vect n Evidence) -> Ghost
+
 allEvidences : List Evidence
 allEvidences = [EMP, Orbs, Box, Freezing, Ultraviolet, Writting, DOTS]
-
-record Ghost where
-    constructor MkGhost
-    name : String
-    evidences : List Evidence
 
 allGhosts : List Ghost
 allGhosts = [
@@ -62,24 +61,6 @@ allGhosts = [
 currentGhosts : List Ghost
 currentGhosts = allGhosts
 
-covering
-forever : Fuel'
-forever = More forever
-
-total
-run : Fuel' -> InfIO -> IO()
-run Dry _ = putStrLn "Out of fuel. Goodbye!"
-run (More f) (Do action next) = do
-    result <- action
-    run f (next result)
-run _ (Done final) = final
-
-(>>=) : IO a -> (a -> Inf InfIO) -> InfIO
-(>>=) = Do
-
-(>>) : IO a -> Inf InfIO -> Inf InfIO
-(>>) act next = Do act (\_ => next)
-
 showEvidence : Evidence -> String
 showEvidence e = case e of
                       EMP => "EMP 5 (EMP)"
@@ -97,16 +78,23 @@ showEvidenceList evidences = case evidences of
 
 showGhost : Ghost -> String
 showGhost (MkGhost name evidences) =
-    name ++ " (" ++ joinBy ", " (map showEvidence evidences) ++ ")"
+    name ++ " (" ++ joinBy ", " (map showEvidence (toList evidences)) ++ ")"
 
 showGhostList : List Ghost -> String
 showGhostList ghosts = case ghosts of
                             [] => "No ghosts"
                             _ => joinBy "\n" (map showGhost ghosts)
 
+
+(>>=) : IO a -> (a -> Inf InfIO) -> InfIO
+(>>=) = Do
+
+(>>) : IO a -> Inf InfIO -> Inf InfIO
+(>>) act next = Do act (\_ => next)
+
 filterGhosts : List Evidence -> List Ghost
 filterGhosts selected =
-    filter (\(MkGhost _ evs) => all (`elem` evs) selected) allGhosts
+    filter (\(MkGhost _ evs) => all (`elem` (toList evs)) selected) allGhosts
 
 parseEvidence : String -> Maybe Evidence
 parseEvidence str = case toLower str of
@@ -142,6 +130,18 @@ handleInput input checked =
         ["help"] => ("Available commands:\ncheck [evidence]\nuncheck [evidence]\nghosts\nghosts all\nevidences\nevidences all\nexit", checked)
         _ => ("Unknown command", checked)
 
+covering
+forever : Fuel'
+forever = More forever
+
+total
+run : Fuel' -> InfIO -> IO()
+run Dry _ = putStrLn "Out of fuel. Goodbye!"
+run (More f) (Do action next) = do
+    result <- action
+    run f (next result)
+run _ (Done final) = final
+
 loop : List Evidence -> InfIO
 loop checked =
     Do (putStr "\n>>>") $ \_ =>
@@ -173,3 +173,15 @@ testShowEvidenceList' = Refl
 
 testShowGhost : showGhost (MkGhost "Spirit" [EMP, Box, Writting]) = "Spirit (EMP 5 (EMP), Spirit Box (Box), Ghost Writting (Writting))"
 testShowGhost = Refl
+
+testCheckUncheckSequence :
+    let (_, s1) = handleInput "check emp" [] in
+    let (_, s2) = handleInput "check box" s1 in
+    let (_, s3) = handleInput "uncheck emp" s2 in
+    s3 = [Box]
+testCheckUncheckSequence = Refl
+
+testAllSelectedIncluded : 
+  let selected = [Freezing, Ultraviolet] in
+  all (\(MkGhost _ evs) => all (\e => e `elem` (toList evs)) selected) (filterGhosts selected) = True
+testAllSelectedIncluded = Refl
